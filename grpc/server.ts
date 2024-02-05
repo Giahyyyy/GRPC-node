@@ -67,6 +67,7 @@ function getServer() {
           const groupName = msg.split(':')[1].trim();
           const groupInfo = { group_name: groupName };
           groupMembers.set(groupName, new Set([username]));
+          //console.log(`${username} has joined the group "${groupName}".`)
           // Gửi thông báo tạo nhóm cho tất cả các người dùng
           for (let [user, usersCall] of callObjByUsername) {
             usersCall.write({
