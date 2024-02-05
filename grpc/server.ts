@@ -30,6 +30,7 @@ function main() {
 
 
 const callObjByUsername = new Map<string, grpc.ServerDuplexStream<ChatRequest, ChatResponse>>()
+const groupMembers = new Map<string, Set<string>>();
 
 function getServer() {
   const server = new grpc.Server()
@@ -61,7 +62,57 @@ function getServer() {
           } else {
             console.log(`User ${recipient} is not online.`);
           }
-        } else {
+        }else if (msg.startsWith('#creategroup:')) {
+          // Tạo nhóm
+          const groupName = msg.split(':')[1].trim();
+          const groupInfo = { group_name: groupName };
+          groupMembers.set(groupName, new Set([username]));
+          // Gửi thông báo tạo nhóm cho tất cả các người dùng
+          for (let [user, usersCall] of callObjByUsername) {
+            usersCall.write({
+              username: 'Server',
+              message: `Group "${groupName}" has been created.`
+            });
+          }
+        } 
+        else if (msg.startsWith('#join:')) {
+          // Tham gia nhóm
+          const groupName = msg.split(':')[1].trim();
+
+          if (!groupMembers.has(groupName)) {
+            call.write({
+              username: 'Server',
+              message: `Group "${groupName}" does not exist.`,
+            });
+          } else {
+            // Gửi thông báo tham gia nhóm cho tất cả các người dùng trong nhóm
+            for (let [user, usersCall] of callObjByUsername) {
+              if (user !== username && groupMembers.get(groupName)?.has(user)) {
+                usersCall.write({
+                  username: 'Server',
+                  message: `${username} has joined the group "${groupName}".`,
+                });
+              }
+            }
+            groupMembers.get(groupName)?.add(username);
+          }
+        }
+        else if (msg.startsWith('*')) {
+          // Xử lý tin nhắn nhóm
+          const groupName = msg.split(' ')[0].slice(1, -1);
+          const groupMessage = msg.substring(groupName.length + 2);
+
+          // Tìm nhóm và gửi tin nhắn đến các thành viên trong nhóm
+          for (let [user, usersCall] of callObjByUsername) {
+            if (username !== user && groupMembers.get(groupName)?.has(user)) {
+              usersCall.write({
+                username: username,
+                message: `#${groupName}: ${groupMessage}`
+              });
+            }
+          }
+        }
+         else {
           // Tin nhắn broadcast
           for (let [user, usersCall] of callObjByUsername) {
             if (username !== user) {
@@ -108,8 +159,6 @@ function handleRegister(call: grpc.ServerDuplexStream<ChatRequest, ChatResponse>
     callObjByUsername.set(username, call);
     console.log(`${username} has connected`);
   }
-
-  
 }
 
 

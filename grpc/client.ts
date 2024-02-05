@@ -40,6 +40,7 @@ function onClientReady() {
 
   const metadata = new grpc.Metadata()
   metadata.set("username", username)
+
   const call = client.Chat(metadata)
   
   // call.write({
@@ -53,15 +54,36 @@ function onClientReady() {
       call.end();
     } else {
       const privateMessageRegex = /^@(\w+): (.+)$/;
-      const match = line.match(privateMessageRegex);
-      if (match) {
-        const recipient = match[1];
-        const message = match[2];
+      const groupMessageRegex = /^#(\w+): (.+)$/;
+       const joinGroupRegex = /^#join:(\w+)$/;
+      //const match = line.match(privateMessageRegex);
+      
+      const privateMatch = line.match(privateMessageRegex);
+      const groupMatch = line.match(groupMessageRegex);
+      const joinMatch = line.match(joinGroupRegex);
+
+      if (privateMatch) {
+        const recipient = privateMatch[1];
+        const message = privateMatch[2];
         console.log(`Sending private to ${recipient}: ${message}`);
         call.write({
           message: `@${recipient}: ${message}`
         });
-      } else {
+      }else if (groupMatch) {
+        const groupName = groupMatch[1];
+        const groupMessage = groupMatch[2];
+        console.log(`Sending group message to ${groupName}: ${groupMessage}`);
+        call.write({
+          message: `#${groupName}: ${groupMessage}`
+        });
+      }else if (joinMatch) {
+        const groupName = joinMatch[1];
+        console.log(`Joining group: ${groupName}`);
+        call.write({
+          message: `#join:${groupName}`,
+        });
+      }
+       else {
         console.log(`Sending broadcast message: ${line}`);
         call.write({
           message: line
@@ -72,11 +94,16 @@ function onClientReady() {
 
   call.on("data", (chunk) => {
     const isPrivateMessage = chunk.message.includes("@");
+    const isGroupMessage = chunk.message.includes('#');
     //console.log("Message:", chunk.message);
     if (isPrivateMessage) {
       // Xử lý tin nhắn riêng
       console.log(`Private from ${chunk.username}: ${chunk.message}`);
-    } else {
+    }else if (isGroupMessage) {
+      // Xử lý tin nhắn nhóm
+      console.log(`Group message from ${chunk.username}: ${chunk.message}`);
+    }
+     else {
       // Xử lý tin nhắn broadcast
       console.log(`Broadcast from ${chunk.username}: ${chunk.message}`);
     }
