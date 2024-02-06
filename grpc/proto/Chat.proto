@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package chatPackage;
+
+service ChatService {
+ 
+  rpc Chat(stream ChatRequest) returns (stream ChatResponse) {};
+}
+
+
+message GroupInfo {
+  string group_name = 1;
+}
+
+message GroupMessage {
+  GroupInfo group_info = 1;
+  string message = 2;
+}
+
+message ChatRequest {
+  oneof message_type {
+    string message = 1;
+    GroupMessage group_message = 2;
+  }
+}
+
+message ChatResponse {
+  string username = 1;
+  string message = 2;
+}

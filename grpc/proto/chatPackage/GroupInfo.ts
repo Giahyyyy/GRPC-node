@@ -1,4 +1,4 @@
-// Original file: proto/random.proto
+// Original file: proto/Chat.proto
 
 
 export interface GroupInfo {
